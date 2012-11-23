@@ -170,7 +170,7 @@ It's useful, when defining very very big spaces.
 
 If you want to set max number of fields in one space, you may set cardinality: `space[0].cardinality = 5`
 
-#### Using client.
+#### Using client and SQL-like syntax.
 
 Let's start the client: `$ ./tarantool`. We'll get something like this: `localhost>`.
 
@@ -219,6 +219,8 @@ Let's start Tarantool with this space configuration:
 
 Examples:
 
+##### Insert and Delete example:
+
 	localhost> insert into t0 values (1,2,3,4)
 	Insert OK, 1 rows affected
 	localhost> insert into t0 values (1,2,3,4)
@@ -237,6 +239,9 @@ Examples:
 	Insert OK, 1 rows affected
 	localhost> insert into t0 values (6, 'you')
 	Insert OK, 1 rows affected
+
+##### Select example:
+
 	localhost> select * from t0 where k0=1
 	Select OK, 1 rows affected
 	[1, 'hello']
@@ -252,7 +257,21 @@ Examples:
 	[4, 'you']
 	[6, 'you']
 	[2, 'i']
-	...
+
+##### Update example:
+
+	localhost> select * from t0 where k0=2
+	Select OK, 1 rows affected
+	[2, 'i']
+	localhost> update t0 set k1=splice(k1,1,0,' love') where k0=2
+	Update OK, 1 rows affected
+	localhost> select * from t0 where k0=2
+	Select OK, 1 rows affected
+	[2, 'i love']
+
+
+
+
 
 ### Understanding SQL-Like Syntax.
 
