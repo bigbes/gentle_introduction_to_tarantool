@@ -221,6 +221,8 @@ Examples:
 
 ##### Insert and Delete example:
 
+This `insert into tN` means that it insert information from N-th space.
+
 	localhost> insert into t0 values (1,2,3,4)
 	Insert OK, 1 rows affected
 	localhost> insert into t0 values (1,2,3,4)
@@ -242,6 +244,9 @@ Examples:
 
 ##### Select example:
 
+There `where kN` means that it select tuples, where N-th key is.
+Also Tarantool's SQL accepts `and` keyword for constructing multipart keys, `or` keyword for multiple concurrent requests and `limit` keyword for limiting number of returned tuple.
+
 	localhost> select * from t0 where k0=1
 	Select OK, 1 rows affected
 	[1, 'hello']
@@ -259,6 +264,20 @@ Examples:
 	[2, 'i']
 
 ##### Update example:
+	
+In update `set kN` means insertion not into N-th key, but N-th field. In `set kN=kM..` or `set kN=splice(kM..` N and M must be the same.
+Available operations:
+**For strings**:
+* `.. set kN=splice(kN, pos, n, str) ..` - cut n characters from pos and insert str.
+**For ints:**
+* `.. set kN=kN + n` - Add n to the k'th field.
+* `.. set kN=kN & n` - Bitwise and n with k'th field.
+* `.. set kN=kN ^ n` - Bitwise xor n with k'th field.
+* `.. set kN=kN | n` - Bitwise or n with k'th field.
+**For fields:**
+* `.. set kN=value` - value may be STR or INT*. Also supported appending. You must use last + 1 with number of field.
+Also we can combine a number of operations using commas
+
 
 	localhost> select * from t0 where k0=2
 	Select OK, 1 rows affected
@@ -268,16 +287,16 @@ Examples:
 	localhost> select * from t0 where k0=2
 	Select OK, 1 rows affected
 	[2, 'i love']
+	localhost> update t0 set k2='ice cream' where k0=2
+	Update OK, 1 rows affected
+	localhost> select * from t0 where k0=2
+	Select OK, 1 rows affected
+	[2, 'i love', 'ice cream']
+	localhost> update t0 set k1='i', k2=0 where k0=2
+	Update OK, 1 rows affected
+	localhost> select * from t0 where k0=2
+	Select OK, 1 rows affected
+	[2, 'i', 0]
 
-
-
-
-
-### Understanding SQL-Like Syntax.
-
-#### Insert
-#### Select
-#### Update
-#### Delete
-#### Call
+##### Call example:
 
