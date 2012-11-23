@@ -177,13 +177,16 @@ Let's start the client: `$ ./tarantool`. We'll get something like this: `localho
 Type `help` to see the list of all commands.
 
 Let me show you some basic commands:
+
 * `show info` - shows us some basic information as version, uptime, pid and etc.
 * `show configuration` - shows full configuration for server.
 * `show slab` - show free/full space in SLAB.
 * `show stat` - show some statistics in tarantool.
 * `save snapshot` - save snapshot. 
 * `reload configuration` - reload configuration.
+
 Also some base commands are(SQL-like notation):
+
 * `insert into (space) values (tuples)`
 * `replace into (space) values (tuples)`
 * `update (space) set (keys)`
@@ -253,17 +256,17 @@ Also Tarantool's SQL accepts `and` keyword for constructing multipart keys, `or`
 ##### Update example:
 	
 In update `set kN` means insertion not into N-th key, but N-th field. In `set kN=kM..` or `set kN=splice(kM..` N and M must be the same.
+
 Available operations:
-**For strings**:
-* `.. set kN=splice(kN, pos, n, str) ..` - cut n characters from pos and insert str.
-**For ints:**
-* `.. set kN=kN + n` - Add n to the k'th field.
-* `.. set kN=kN & n` - Bitwise and n with k'th field.
-* `.. set kN=kN ^ n` - Bitwise xor n with k'th field.
-* `.. set kN=kN | n` - Bitwise or n with k'th field.
-**For fields:**
-* `.. set kN=value` - value may be STR or INT*. Also supported appending. You must use last + 1 with number of field.
-Also we can combine a number of operations using commas
+
+* `.. set kN=splice(kN, pos, n, str) ..` - cut n characters from pos and insert str (for STR)
+* `.. set kN=kN + n` - Add n to the k'th field (for INT*)
+* `.. set kN=kN & n` - Bitwise and n with k'th field(for INT*)
+* `.. set kN=kN ^ n` - Bitwise xor n with k'th field(for INT*)
+* `.. set kN=kN | n` - Bitwise or n with k'th field(for INT*)
+* `.. set kN=value` - value may be STR or INT*. Also supported appending. You must use `last + 1` in field number(for fields)
+
+Also we can combine a number of operations using commas.
 
 	localhost> select * from t0 where k0=2
 	Select OK, 1 rows affected
@@ -286,3 +289,4 @@ Also we can combine a number of operations using commas
 
 ##### Call example:
 
+	
