@@ -177,31 +177,18 @@ Let's start the client: `$ ./tarantool`. We'll get something like this: `localho
 Type `help` to see the list of all commands.
 
 Let me show you some basic commands:
-
 * `show info` - shows us some basic information as version, uptime, pid and etc.
-
 * `show configuration` - shows full configuration for server.
-
 * `show slab` - show free/full space in SLAB.
-
 * `show stat` - show some statistics in tarantool.
-
 * `save snapshot` - save snapshot. 
-
 * `reload configuration` - reload configuration.
-
 Also some base commands are(SQL-like notation):
-
 * `insert into (space) values (tuples)`
-
 * `replace into (space) values (tuples)`
-
 * `update (space) set (keys)`
-
 * `delete from (space) where (keys)`
-
 * `select * from (space) where (keys)`
-
 * `call (function)(tuple)`
 
 Let's start Tarantool with this space configuration:
@@ -277,7 +264,6 @@ Available operations:
 **For fields:**
 * `.. set kN=value` - value may be STR or INT*. Also supported appending. You must use last + 1 with number of field.
 Also we can combine a number of operations using commas
-
 
 	localhost> select * from t0 where k0=2
 	Select OK, 1 rows affected
