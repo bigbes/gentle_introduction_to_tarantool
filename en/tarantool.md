@@ -236,6 +236,7 @@ This `insert into tN` means that it insert information from N-th space.
 
 There `where kN` means that it select tuples, where N-th key is.
 Also Tarantool's SQL accepts `and` keyword for constructing multipart keys, `or` keyword for multiple concurrent requests and `limit` keyword for limiting number of returned tuple.
+k
 
 	localhost> select * from t0 where k0=1
 	Select OK, 1 rows affected
@@ -260,11 +261,11 @@ In update `set kN` means insertion not into N-th key, but N-th field. In `set kN
 Available operations:
 
 * `.. set kN=splice(kN, pos, n, str) ..` - cut n characters from pos and insert str (for STR)
-* `.. set kN=kN + n` - Add n to the k'th field (for INT*)
-* `.. set kN=kN & n` - Bitwise and n with k'th field(for INT*)
-* `.. set kN=kN ^ n` - Bitwise xor n with k'th field(for INT*)
-* `.. set kN=kN | n` - Bitwise or n with k'th field(for INT*)
-* `.. set kN=value` - value may be STR or INT*. Also supported appending. You must use `last + 1` in field number(for fields)
+* `.. set kN=kN + n ..` - Add n to the k'th field (for NUM*)
+* `.. set kN=kN & n ..` - Bitwise and n with k'th field (for NUM*)
+* `.. set kN=kN ^ n ..` - Bitwise xor n with k'th field (for NUM*)
+* `.. set kN=kN | n ..` - Bitwise or n with k'th field (for NUM*)
+* `.. set kN=value ..` - value may be STR or NUM*. Also supported appending, but `last + 1` must be used for field number (for Fields)
 
 Also we can combine a number of operations using commas.
 
@@ -289,4 +290,232 @@ Also we can combine a number of operations using commas.
 
 ##### Call example:
 
+Let's try to use some basic embedded functions and try to write our own one.
+Full documentation on lua-box and writing stored procedures [here](http://tarantool.org/tarantool_user_guide.html#stored-procedures) and repo with written stored procedures [here](https://github.com/mailru/tntlua)
+
+Basic language for writing stored procedures is [Lua](http://en.wikipedia.org/wiki/Lua_(programming_language)). [Lua](http://www.lua.org/) is light-weight, multi-paradigm, embeddable language. Tarantool uses [LuaJIT](http://luajit.org/) that is possibly fastest realisation of lua. 
+
+	There's difference between call and lua. First is used thru basic protocol and have some restictions. Also call data is returned in the tuples.
+
+Now let's write lua function in client:
+
+	localhost> lua function f1() return 'hello' end
+	---
+	...
+
+	localhost> call f1()
+	Call OK, 1 rows affected
+	['hello world']
+	localhost> lua f1()
+	---
+	 - hello world
+	...
+
+Now we will show all tuples that are stored in zero space:
+
+	localhost> lua for k,v in box.space[0]:pairs() do print(v) end
+	---
+	1: {'hello'}
+	2: {'i', 0}
+	3: {'love'}
+	4: {'you'}
+	5: {'can'}
+	6: {'you'}
+
+Let's then clean our space and start from beggining:
+
+	localhost> insert into t0 values (1,1,'lolwat')
+	Insert OK, 1 rows affected
+	localhost> insert into t0 values (1,2,'lolwat!')
+	Insert OK, 1 rows affected
+
+In `box` package we have subpackage named `index`. This package implemets methods of type `box.index`. We can iterate through all tuples:
+
+	localhost> lua for k,v in box.space[0].index[0].next, box.space[0].index[0], nil do print(v) end
+	---
+	1: {1, 'lolwat'}
+	1: {2, 'lolwat!'}
+	...
+
+Well, now it's time to insert some more tuples and try some other command:
+
+	localhost> insert into t0 values (2,1,'i am from poland')
+	Insert OK, 1 rows affected
+	localhost> insert into t0 values (2,2,'my parents are from tailand')
+	Insert OK, 1 rows affected
+	localhost> insert into t0 values (2,3,'i clean my teeth everyday')
+	Insert OK, 1 rows affected
+
+	localhost> lua for k,v in box.space[0].index[0].next, box.space[0].index[0], 2 do print(v) end
+	---
+	2: {1, 'i am from poland'}
+	2: {2, 'my parents are from tailand'}
+	2: {3, 'i clean my teeth everyday'}
+	...
+
+Also there presented a number of packages like `cfg`, `space`, `index` and `tuple`. All they are documented in [documentation](http://tarantool.org/tarantool_user_guide.html#stored-procedures).
+
+## Simple blog backend in Python.
+
+### Begining 
+
+Let's think about structure of blog db's. We need spaces (and let's bind field) for.
+Our blog will allow multiple user's to write posts and comments it
+
+* Users
+	- id
+	- name 
+	- e-mail
+	- list of Posts
+	- list of Commentaries
+* Posts
+	- id
+	- user
+	- header
+	- text
+	- list of Commentaries
+* Commentaries
+	- id
+	- answer to
+	- user
+	- text
+
+Users information will be stored in space 0 e.g.:
+
+	(0, 'bigbes', 'bigbes@gmail.com') // id, type, name, email
+	(1, 'kosipov', 'kostja.osipov@gmail.com')
+	(2, 'pmwkaa', 'pmwkaa@gmail.com')
+
+Posts info in space 1:
+
+	(1, 0, 1, 'hello!', '..') // id, type, user, header, text
+	(1, 1, 1, 2, 3) // id, type, comments
+
+	(2, 0, 2, 'Benefits of Tarantool/Box', '..')
+	(2, 1, 6, 10)
+
+	(3, 0, 1, '1.5 billion requests with Tarantool/Box', '..')
+	(3, 1, 3, 4, 5)
+	...
+
+Comments info in space 2:
 	
+	(1, 0, 1, 'great') // id, answer to comment id (will be zero if comment is answer to post), user, message 
+	(2, 1, 0, 'thanks')
+	(3, 0, 2, 'really interesting')
+	...
+
+Posts of users in space 3:
+
+	(0, 1, 7) // id, type, posts id..
+	(1, 2, 3, 5, 8)
+	(2, 4, 6)
+
+Comments of users in space 4:
+
+	(0, 2, 7, 9) // id, type, comments id.. 
+	(1, 1, 4, 6)
+	(2, 3, 5, 8, 10, 11)
+
+Now we must understand what values must be keys:
+
+* Space 0
+	- First key is unique key with field 0(NUM).
+
+* Space 1
+	- First key is unique and multipart with fields 0(NUM), 1(NUM).
+
+* Space 2
+	- First key is unique and have field 0(NUM)
+	- Second key have field 1(NUM) - designed for searching all anwers to some comment.
+	- Third key have field 2(NUM) - designed for searching comments by user.
+	- Also cardinality of any tuple in this space must be 4.
+
+* Space 3
+	- 
+
+* Space 4
+
+
+So we have:
+
+	space[0].enabled = 1
+	space[0].index[0].type = "TREE"
+	space[0].index[0].unique = 1
+	space[0].index[0].key_field[0].fieldno = 0
+	space[0].index[0].key_field[0].type = "NUM"	
+
+	space[1].enabled = 1
+	space[1].index[0].type = "TREE"
+	space[1].index[0].unique = 1
+	space[1].index[0].key_field[0].fieldno = 0
+	space[1].index[0].key_field[0].type = "NUM"
+	space[1].index[1].type = "TREE"
+	space[1].index[1].unique = 0
+	space[1].index[1].key_field[0].fieldno = 2
+	space[1].index[1].key_field[0].type = "NUM"
+
+	space[2].enabled = 1
+	space[2].cardinality = 4
+	space[2].index[0].type = "TREE"
+	space[2].index[0].unique = 1
+	space[2].index[0].key_field[0].fieldno = 0
+	space[2].index[0].key_field[0].type = "NUM"
+	space[2].index[1].type = "TREE"
+	space[2].index[1].unique = 0
+	space[2].index[1].key_field[0].fieldno = 2
+	space[2].index[1].key_field[0].type = "NUM"
+	space[2].index[2].type = "TREE"
+	space[2].index[2].unique = 0
+	space[2].index[2].key_field[0].fieldno = 2
+	space[2].index[2].key_field[0].type = "NUM"
+
+	space[3].enabled = 1
+	space[3].index[0].type = "TREE"
+	space[3].index[0].unique = 1
+	space[3].index[0].key_field[0].fieldno = 0
+	space[3].index[0].key_field[0].type = "NUM"
+	
+	space[4].enabled = 1
+	space[4].indexi0].type = "TREE"
+	space[4].index[0].unique = 1
+	space[4].index[0].key_field[0].fieldno = 0
+	space[4].index[0].key_field[0].type = "NUM"
+
+### Code
+
+Okay, now let's write python code for:
+
+* Creating post 
+* Creating comment 
+* Getting last 10 posts 
+* Getting all comments to post 
+* Getting user info or his posts/comments
+* Searching for user by name or email
+
+Let's start with importing tarantool module and connect to server:
+
+	import Tarantool
+	server = tarantool.connect("localhost", 33013)
+
+#### Creating posts
+
+	def create_user(user, name, email):
+		answer = server.call("box.auto_increment", (0, user, name, email))
+
+	def create_post(user, header, text):
+		userposts = server.space(3)
+		answer = server.call("box.auto_increment", (1, user, header, text))
+		userposts.update(user, [(-1, '=', answer[0][0])])
+
+	def create_comment(user, answer, message):
+		posts = server.space(1)
+		usercomments = server.space(4)
+		comments = server.call("box.auto_increment", (2, answer, user, message))
+		posts.update(user, [(-1, '=', answer[0][0])])
+		usercomments.update(user, ['-1', '=', answer[0][0]])
+
+	
+
+
+		
